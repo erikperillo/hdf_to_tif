@@ -1,0 +1,4 @@
+*.pyc
+__pyobj__/
+__pycache__/
+*.swp
