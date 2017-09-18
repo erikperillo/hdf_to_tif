@@ -26,6 +26,7 @@ from collections import OrderedDict
 import subprocess as sp
 import tempfile
 import shutil
+import glob
 import oarg
 import os
 
@@ -52,6 +53,8 @@ DEF_CONF = OrderedDict({
     "object_name": "",
     "field_name": "",
     "band_number": "1",
+    "spatial_subset_ul_corner": "",
+    "spatial_subset_lr_corner": "",
     "resampling_type": "BI",
     "output_projection_type": "GEO",
     "ellipsoid_code": "WGS84",
@@ -205,13 +208,18 @@ def hdf_to_tif(inp_fp, out_fp, band, proj, verbose=True):
 
     #getting params of input file
     params = stat(inp_fp, verbose=verbose)
-    print("params:", params)
+    #print("params:", params)
 
     #setting up configuration
     conf = dict(DEF_CONF)
     #input/output filenames
     conf["input_filename"] = inp_fp
     conf["output_filename"] = out_fp
+    #spatial stuff
+    conf["spatial_subset_ul_corner"] =\
+        "( {} )".format(params["grid_ul_corner_latlon"])
+    conf["spatial_subset_lr_corner"] =\
+        "( {} )".format(params["grid_lr_corner_latlon"])
     #name of object
     conf["object_name"] = params["grid_names"].replace(",", "") + "|"
     #band to use
@@ -224,7 +232,8 @@ def hdf_to_tif(inp_fp, out_fp, band, proj, verbose=True):
     #calling command
     run_convert_cmd(conf_fp, verbose=verbose)
     #removing unwanted files
-    for fp in CVT_LOG_FILENAME, conf_fp, out_fp + ".met":
+    for fp in [CVT_LOG_FILENAME, conf_fp, out_fp + ".met"]\
+        + glob.glob("filetable.temp_*") + glob.glob("GetAttrtemp_*"):
         if os.path.isfile(fp):
             os.remove(fp)
 
