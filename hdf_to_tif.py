@@ -38,7 +38,7 @@ STAT_CMD = "/home/erik/bin/heg/bin/hegtool"
 STAT_OUT_FILENAME = "HegHdr.hdr"
 STAT_LOG_FILENAME = "hegtool.log"
 #command for reprojecting
-WARP_CMD = "/usr/local/bin/gdalwarp"
+WARP_CMD = "/usr/bin/gdalwarp"
 
 #environment variables
 ENV = {
@@ -265,7 +265,7 @@ def main():
         error("must provide band (use --help)")
     if not out_fp.found:
         if not inp_fp.val[-4:].lower() == ".hdf":
-            out_fp = inp_fp + ".tif"
+            out_fp = inp_fp.val + ".tif"
         else:
             out_fp = inp_fp.val[:-4] + ".tif"
     else:
