@@ -30,22 +30,25 @@ import glob
 import oarg
 import os
 
-#command for hdf-tif conversion tool
-CVT_CMD = "/home/erik/bin/heg/bin/resample"
-CVT_LOG_FILENAME = "resample.log"
-#command for hdf file stat tool
-STAT_CMD = "/home/erik/bin/heg/bin/hegtool"
-STAT_OUT_FILENAME = "HegHdr.hdr"
-STAT_LOG_FILENAME = "hegtool.log"
-#command for reprojecting
-WARP_CMD = "/usr/bin/gdalwarp"
-
 #environment variables
 ENV = {
     "HEGUSER": "BOB",
     "MRTDATADIR": "/home/erik/bin/heg/data",
     "PGSHOME": "/home/erik/bin/heg/TOOLKIT_MTD"
 }
+
+#command for hdf-tif conversion tool
+CVT_CMD = "/home/erik/bin/heg/bin/resample"
+#command for hdf file stat tool
+STAT_CMD = "/home/erik/bin/heg/bin/hegtool"
+STAT_OUT_FILENAME = "HegHdr.hdr"
+#command for reprojecting
+WARP_CMD = "/usr/bin/gdalwarp"
+TO_DEL_FP_PATTERNS = [
+    "hegtool.log",
+    "resample.log",
+    STAT_OUT_FILENAME,
+]
 
 #default configuration parameters for conversion tool
 DEF_CONF = OrderedDict({
@@ -182,11 +185,6 @@ def stat(inp_fp, verbose=True):
     #running command
     run_stat_cmd(inp_fp, verbose=verbose)
 
-    #deleting unwanted log file
-    log_fp = STAT_LOG_FILENAME
-    if os.path.isfile(log_fp):
-        os.remove(log_fp)
-
     #parsing output of stat
     out_fp = STAT_OUT_FILENAME
     with open(out_fp, "r") as f:
@@ -194,7 +192,7 @@ def stat(inp_fp, verbose=True):
     lines = text.split("\n")
     lines = [l.strip(" ") for l in lines if l.strip(" ")]
     #deleting file with output of command
-    os.remove(out_fp)
+    #os.remove(out_fp)
 
     params = {l.split("=")[0].lower(): l.split("=")[1] for l in lines}
     return params
@@ -229,25 +227,28 @@ def hdf_to_tif(inp_fp, out_fp, band, proj, verbose=True):
     #making configuration file
     conf_fp = mk_conf_file(conf)
 
-    #calling command
+    #calling convert command
     run_convert_cmd(conf_fp, verbose=verbose)
-    #removing unwanted files
-    for fp in [CVT_LOG_FILENAME, conf_fp, out_fp + ".met"]\
-        + glob.glob("filetable.temp_*") + glob.glob("GetAttrtemp_*"):
-        if os.path.isfile(fp):
-            os.remove(fp)
 
     #reprojecting if required
     if proj:
         tmp = tempfile.mktemp()
         run_warp_cmd(out_fp, tmp, proj, verbose=verbose)
         shutil.move(tmp, out_fp)
+        #to_del_fp_patterns.extend(["filetable.temp_*", "GetAttrtemp_*", "tmp*"])
+
+    #deleting unwanted files
+    to_del_fp_patterns = list(TO_DEL_FP_PATTERNS)
+    to_del_fp_patterns.extend([conf_fp, out_fp + ".met", "filetable.temp_*"])
+    for pattern in to_del_fp_patterns:
+        for fp in glob.glob(pattern):
+            os.remove(fp)
 
 def main():
     #command-line args
     inp_fp = oarg.Oarg("-i --input", "", "input filepath", 0)
     band = oarg.Oarg("-b --band", "", "band name", 1)
-    out_fp = oarg.Oarg("-o --output", "", "output filepath", 3)
+    out_fp = oarg.Oarg("-o --output", "", "output filepath", 2)
     silence = oarg.Oarg("-s --silence", False, "suppress convert tool output")
     proj = oarg.Oarg("-p --projection", "", "warp from geo to EPSG:XXXX")
     hlp = oarg.Oarg("-h --help", False, "this help message")
